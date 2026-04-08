@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Weekly Tracker</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #F5F3EE;
+    --surface: #FFFFFF;
+    --border: rgba(0,0,0,0.08);
+    --border-strong: rgba(0,0,0,0.15);
+    --text: #1A1A18;
+    --text-muted: #888880;
+    --text-faint: #BBBBB0;
+    --success: #2A7A50;
+    --success-bg: #E8F5EE;
+    --mono: 'DM Mono', monospace;
+    --sans: 'DM Sans', sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: var(--sans); font-weight: 300; min-height: 100vh; padding: 2rem 1.5rem; max-width: 680px; margin: 0 auto; }
+
+  header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 2.5rem; }
+  .header-left h1 { font-family: var(--mono); font-size: 11px; font-weight: 400; letter-spacing: 0.12em; text-transform: uppercase; color: var(--text-muted); margin-bottom: 4px; }
+  .week-label { font-family: var(--mono); font-size: 22px; font-weight: 300; color: var(--text); letter-spacing: -0.02em; }
+  .week-nav { display: flex; gap: 2px; align-items: center; margin-top: 6px; }
+  .week-nav button { background: none; border: 0.5px solid var(--border-strong); color: var(--text-muted); font-family: var(--mono); font-size: 11px; padding: 4px 10px; cursor: pointer; border-radius: 3px; transition: all 0.15s; }
+  .week-nav button:hover { background: var(--surface); color: var(--text); }
+  .header-right { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
+  .reset-btn { background: none; border: none; font-family: var(--mono); font-size: 10px; color: var(--text-faint); cursor: pointer; letter-spacing: 0.05em; text-transform: uppercase; padding: 4px 0; transition: color 0.15s; }
+  .reset-btn:hover { color: #C85A30; }
+  #saveStatus { font-family: var(--mono); font-size: 10px; letter-spacing: 0.05em; color: var(--text-faint); min-height: 14px; }
+
+  .goals { display: flex; flex-direction: column; gap: 12px; margin-bottom: 2.5rem; }
+  .goal-card { background: var(--surface); border: 0.5px solid var(--border); border-radius: 12px; padding: 1.25rem 1.5rem; transition: border-color 0.2s; }
+  .goal-card.done { border-color: rgba(42,122,80,0.3); }
+  .goal-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; margin-bottom: 10px; }
+  .goal-meta { flex: 1; }
+  .goal-label { display: flex; align-items: center; gap: 8px; margin-bottom: 5px; }
+  .dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .goal-name { font-size: 13px; font-weight: 500; color: var(--text); letter-spacing: 0.01em; }
+  .goal-meta-bottom { display: flex; align-items: center; gap: 7px; margin-left: 16px; flex-wrap: wrap; }
+  .goal-desc { font-size: 11px; color: var(--text-muted); font-family: var(--mono); }
+  .zone-badge { font-family: var(--mono); font-size: 9px; letter-spacing: 0.05em; text-transform: uppercase; padding: 2px 6px; border-radius: 3px; flex-shrink: 0; font-weight: 400; }
+  .zone-0 { background: #EEEEF8; color: #3A3A7A; }
+  .zone-1 { background: #FDF0EB; color: #993C1D; }
+  .zone-2 { background: #EEE8FB; color: #4A3AB7; }
+  .zone-3 { background: #FDF3E3; color: #854F0B; }
+  .zone-4 { background: #E8F5F1; color: #0F6E56; }
+  .goal-right { text-align: right; flex-shrink: 0; }
+  .fraction { font-family: var(--mono); font-size: 28px; font-weight: 300; line-height: 1; letter-spacing: -0.03em; }
+  .fraction .sep { color: var(--text-faint); font-size: 20px; }
+  .fraction .target { color: var(--text-faint); font-size: 20px; }
+  .goal-unit { font-family: var(--mono); font-size: 10px; color: var(--text-faint); text-transform: uppercase; letter-spacing: 0.08em; margin-top: 2px; }
+  .bar-track { height: 2px; background: var(--bg); border-radius: 1px; margin-bottom: 14px; overflow: hidden; }
+  .bar-fill { height: 2px; border-radius: 1px; transition: width 0.4s cubic-bezier(0.4,0,0.2,1); max-width: 100%; }
+  .actions { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+  .add-btn { font-family: var(--mono); font-size: 11px; font-weight: 400; padding: 5px 12px; border-radius: 4px; cursor: pointer; border: 0.5px solid var(--border-strong); background: none; color: var(--text-muted); transition: all 0.15s; letter-spacing: 0.03em; }
+  .add-btn:hover { background: var(--bg); color: var(--text); }
+  .add-btn.primary { border-color: currentColor; }
+  .done-badge { font-family: var(--mono); font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--success); background: var(--success-bg); padding: 4px 10px; border-radius: 3px; }
+
+  .log-section { margin-bottom: 2rem; }
+  .section-title { font-family: var(--mono); font-size: 10px; text-transform: uppercase; letter-spacing: 0.12em; color: var(--text-faint); margin-bottom: 10px; }
+  .log-list { display: flex; flex-direction: column; gap: 4px; }
+  .log-item { display: flex; align-items: center; justify-content: space-between; padding: 8px 12px; background: var(--surface); border: 0.5px solid var(--border); border-radius: 6px; font-family: var(--mono); font-size: 11px; }
+  .log-item-left { display: flex; align-items: center; gap: 8px; }
+  .log-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+  .log-text { color: var(--text); }
+  .log-time { color: var(--text-faint); font-size: 10px; }
+  .log-remove { background: none; border: none; color: var(--text-faint); cursor: pointer; font-size: 14px; padding: 0 2px; line-height: 1; transition: color 0.15s; }
+  .log-remove:hover { color: #C85A30; }
+  .empty-log { font-family: var(--mono); font-size: 11px; color: var(--text-faint); padding: 12px 0; }
+
+  .media-input-row { display: flex; gap: 6px; margin-bottom: 10px; align-items: center; }
+  .media-input-row input[type="text"] { flex: 1; font-family: var(--mono); font-size: 12px; padding: 6px 10px; border: 0.5px solid var(--border-strong); border-radius: 4px; background: var(--bg); color: var(--text); outline: none; }
+  .media-input-row input[type="text"]:focus { background: var(--surface); }
+  .media-input-row input[type="text"]::placeholder { color: var(--text-faint); }
+  .media-list { display: flex; flex-direction: column; gap: 4px; margin-bottom: 8px; }
+  .media-item { display: flex; align-items: center; justify-content: space-between; font-family: var(--mono); font-size: 11px; color: var(--text); padding: 5px 8px; background: var(--bg); border-radius: 4px; }
+  .media-item-remove { background: none; border: none; color: var(--text-faint); cursor: pointer; font-size: 13px; padding: 0 2px; transition: color 0.15s; }
+  .media-item-remove:hover { color: #C85A30; }
+
+  .stats-section { margin-bottom: 1.5rem; }
+  .stats-card { background: var(--surface); border: 0.5px solid var(--border); border-radius: 12px; padding: 1.5rem; }
+  .pie-and-legend { display: flex; align-items: center; gap: 2rem; }
+  .pie-wrap { flex-shrink: 0; }
+  .legend-wrap { flex: 1; display: flex; flex-direction: column; gap: 10px; }
+  .legend-row { display: flex; align-items: center; gap: 10px; }
+  .legend-swatch { width: 10px; height: 10px; border-radius: 2px; flex-shrink: 0; }
+  .legend-label { font-family: var(--mono); font-size: 11px; color: var(--text-muted); flex: 1; }
+  .legend-nums { text-align: right; }
+  .legend-pct { font-family: var(--mono); font-size: 12px; color: var(--text); }
+  .legend-hrs { font-family: var(--mono); font-size: 10px; color: var(--text-faint); }
+
+  .summary-card { background: var(--surface); border: 0.5px solid var(--border); border-radius: 12px; padding: 1.25rem 1.5rem; margin-bottom: 2rem; }
+  .summary-text { font-family: var(--mono); font-size: 12px; color: var(--text-muted); line-height: 2; }
+  .summary-hi { color: var(--text); }
+  .summary-warn { color: #C85A30; }
+
+  footer { font-family: var(--mono); font-size: 10px; color: var(--text-faint); letter-spacing: 0.05em; text-align: center; padding-top: 1rem; border-top: 0.5px solid var(--border); margin-top: 1rem; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-left">
+    <h1>Weekly Tracker</h1>
+    <div class="week-label" id="weekLabel">—</div>
+    <div class="week-nav">
+      <button onclick="changeWeek(-1)">&#8592; prev</button>
+      <button onclick="changeWeek(0)">this week</button>
+      <button onclick="changeWeek(1)">next &#8594;</button>
+    </div>
+  </div>
+  <div class="header-right">
+    <button class="reset-btn" onclick="confirmReset()">reset week</button>
+    <span id="saveStatus"></span>
+  </div>
+</header>
+
+<div class="goals" id="goalsContainer"></div>
+
+<div class="log-section">
+  <div class="section-title">本周记录</div>
+  <div class="log-list" id="logList"></div>
+</div>
+
+<div class="stats-section">
+  <div class="section-title">本周分区分布</div>
+  <div class="stats-card">
+    <div class="pie-and-legend">
+      <div class="pie-wrap"><canvas id="pieChart" width="140" height="140"></canvas></div>
+      <div class="legend-wrap" id="pieLegend"></div>
+    </div>
+  </div>
+</div>
+
+<div class="summary-card">
+  <div class="section-title" style="margin-bottom:10px;">本周诊断报告</div>
+  <div class="summary-text" id="summaryText"></div>
+</div>
+
+<footer>— 168h / 周 · 二练一休 · 跟着状态走 —</footer>
+
+<script>
+const ZONES = {
+  0: { label: '睡眠',           color: '#4A4A8A' },
+  1: { label: 'Ⅰ 高认知+高情绪', color: '#C85A30' },
+  2: { label: 'Ⅱ 中认知+中情绪', color: '#6A3AB0' },
+  3: { label: 'Ⅲ 高体力+低认知', color: '#8A5A0A' },
+  4: { label: 'Ⅳ 低认知+低情绪', color: '#0F6E56' },
+};
+
+const GOALS = [
+  { id: 'sleep',      name: '睡眠',               desc: '7-9h / 晚 · 不可压缩',           target: 56,  unit: '小时 / 周', color: '#4A4A8A', zone: 0, zoneBadge: 'zone-0', zoneLabel: '睡眠', actions: ['+7h', '+8h', '+9h', '+10h'] },
+  { id: 'gym_upper',  name: '上肢训练',            desc: '胸 / 背 / 肩 / 手臂',             target: 2,   unit: '次 / 周',  color: '#C85A30', zone: 3, zoneBadge: 'zone-3', zoneLabel: 'Ⅲ 区', actions: ['+1次'], hpu: 1.5 },
+  { id: 'gym_lower',  name: '下肢训练',            desc: '腿 / 臀 / 核心',                  target: 2,   unit: '次 / 周',  color: '#C85A30', zone: 3, zoneBadge: 'zone-3', zoneLabel: 'Ⅲ 区', actions: ['+1次'], hpu: 1.5 },
+  { id: 'omscs',      name: 'OMSCS',              desc: '作业 / 课程 / 复习',               target: 10,  unit: '小时 / 周', color: '#1A6FA8', zone: 1, zoneBadge: 'zone-1', zoneLabel: 'Ⅰ 区', actions: ['+30min', '+1h', '+2h', '+3h'] },
+  { id: 'seminar',    name: 'Capitalism seminar', desc: 'perspectives on capitalism',      target: 3,   unit: '小时 / 周', color: '#4A3AB7', zone: 1, zoneBadge: 'zone-1', zoneLabel: 'Ⅰ 区', actions: ['+30min', '+1h', '+1.5h'] },
+  { id: 'networking', name: 'Active networking',  desc: '主动出击 · 给陌生人发消息那种',      target: 1,   unit: '小时 / 周', color: '#A0341A', zone: 1, zoneBadge: 'zone-1', zoneLabel: 'Ⅰ 区', actions: ['+30min', '+1h'] },
+  { id: 'portfolio',  name: 'Portfolio building', desc: '结构型输出 · 作品集 / 项目',        target: 2,   unit: '小时 / 周', color: '#185FA5', zone: 1, zoneBadge: 'zone-1', zoneLabel: 'Ⅰ 区', actions: ['+30min', '+1h', '+2h'] },
+  { id: 'tennis',     name: '网球',               desc: '技术+体力 · 好玩优先',             target: 2,   unit: '次 / 周',  color: '#2A7A30', zone: 3, zoneBadge: 'zone-3', zoneLabel: 'Ⅲ 区', actions: ['+1次'], hpu: 1.5 },
+  { id: 'work',       name: '全职工作',            desc: '最低交付 · 可持续输出',             target: 20,  unit: '小时 / 周', color: '#6A3AB0', zone: 2, zoneBadge: 'zone-2', zoneLabel: 'Ⅱ 区', actions: ['+2h', '+3h', '+4h'] },
+  { id: 'career',     name: 'Career self-learning', desc: 'passive · 看教程 / 轻量探索',   target: 3,   unit: '小时 / 周', color: '#8A4AAA', zone: 2, zoneBadge: 'zone-2', zoneLabel: 'Ⅱ 区', actions: ['+30min', '+1h', '+1.5h'] },
+  { id: 'karamazov',  name: '卡拉马佐夫兄弟',      desc: '~45页/次 · 20周读完',             target: 2,   unit: '小时 / 周', color: '#0F6E56', zone: 4, zoneBadge: 'zone-4', zoneLabel: 'Ⅳ 区', actions: ['+30min', '+40min', '+1h'] },
+  { id: 'cooking',    name: '做饭',               desc: '过程本身是恢复',                   target: 3,   unit: '小时 / 周', color: '#2A7A50', zone: 4, zoneBadge: 'zone-4', zoneLabel: 'Ⅳ 区', actions: ['+30min', '+1h'] },
+  { id: 'leisure_read', name: '看闲书和杂志',      desc: 'Harper\'s / New Yorker / 随手翻', target: 3,   unit: '小时 / 周', color: '#3A7A6A', zone: 4, zoneBadge: 'zone-4', zoneLabel: 'Ⅳ 区', actions: ['+30min', '+1h'] },
+  { id: 'tv',         name: '看电视',             desc: '纯放空',                          target: 3,   unit: '小时 / 周', color: '#4A6A5A', zone: 4, zoneBadge: 'zone-4', zoneLabel: 'Ⅳ 区', actions: ['+30min', '+1h', '+2h'] },
+  { id: 'phone',      name: '耍手机',             desc: '刷刷刷 · 人之常情',               target: 5,   unit: '小时 / 周', color: '#5A7A4A', zone: 4, zoneBadge: 'zone-4', zoneLabel: 'Ⅳ 区', actions: ['+30min', '+1h'] },
+  { id: 'moodboard',  name: 'Mood board building', desc: '审美游牧 / 备婚灵感',            target: 2,   unit: '小时 / 周', color: '#7A5A8A', zone: 4, zoneBadge: 'zone-4', zoneLabel: 'Ⅳ 区', actions: ['+30min', '+1h'] },
+  { id: 'youtube',    name: '看 YouTube',         desc: '随便看看',                        target: 3,   unit: '小时 / 周', color: '#8A3A3A', zone: 4, zoneBadge: 'zone-4', zoneLabel: 'Ⅳ 区', actions: ['+30min', '+1h'] },
+  { id: 'flowers',    name: '插花',               desc: '手脑协调 · 纯享受',               target: 1,   unit: '小时 / 周', color: '#9A5A7A', zone: 4, zoneBadge: 'zone-4', zoneLabel: 'Ⅳ 区', actions: ['+30min', '+1h'] },
+  { id: 'explore',    name: 'Explore the city',   desc: '逛 neighborhoods · 视觉游牧',      target: 2,   unit: '小时 / 周', color: '#3A6A8A', zone: 4, zoneBadge: 'zone-4', zoneLabel: 'Ⅳ 区', actions: ['+30min', '+1h', '+2h'] },
+  { id: 'movie',      name: '电影',               desc: '低认知恢复',                      target: 1,   unit: '部 / 周',  color: '#8A5A0A', zone: 4, zoneBadge: 'zone-4', zoneLabel: 'Ⅳ 区', isMedia: true, placeholder: '片名…', hpu: 2 },
+  { id: 'documentary', name: '纪录片',            desc: '视觉叙事',                        target: 1,   unit: '部 / 周',  color: '#5A6A0A', zone: 4, zoneBadge: 'zone-4', zoneLabel: 'Ⅳ 区', isMedia: true, placeholder: '片名…', hpu: 1.5 },
+];
+
+const AVALS = { '+1次': 1, '+1部': 1, '+30min': 0.5, '+40min': 0.667, '+1h': 1, '+1.5h': 1.5, '+2h': 2, '+3h': 3, '+4h': 4, '+7h': 7, '+8h': 8, '+9h': 9, '+10h': 10 };
+
+// ── Google Sheets 后端 ─────────────────────────────────────────────
+// 把你的 Apps Script Web App URL 粘贴到这里 ↓
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyuJSaLCs0XrNo_Ubd5yKasH6RQur82aEoaKN8MbvNAlajTlfLk61v5SKLGHbflw2MB/exec';
+
+let _cache = {};        // weekKey → { data:{}, log:[], media:{} }
+let _saveTimer = null;
+
+function _getWeek(wk) {
+  if (!_cache[wk]) _cache[wk] = { data: {}, log: [], media: {} };
+  return _cache[wk];
+}
+
+async function _loadAll() {
+  try {
+    const res = await fetch(SCRIPT_URL + '?action=getAll');
+    const all = await res.json();
+    // 合并到 cache（保留本地未同步的改动）
+    Object.assign(_cache, all);
+  } catch (e) {
+    console.warn('无法从 Sheets 加载数据:', e);
+  }
+}
+
+function _scheduleSave(wk) {
+  clearTimeout(_saveTimer);
+  _setStatus('saving');
+  _saveTimer = setTimeout(() => _saveWeek(wk), 1200);
+}
+
+async function _saveWeek(wk) {
+  const w = _getWeek(wk);
+  try {
+    await fetch(SCRIPT_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ week: wk, data: w.data, log: w.log, media: w.media || {} })
+    });
+    _setStatus('saved');
+    setTimeout(() => _setStatus(''), 2000);
+  } catch (e) {
+    console.warn('保存失败:', e);
+    _setStatus('error');
+  }
+}
+
+function _setStatus(s) {
+  const el = document.getElementById('saveStatus');
+  if (!el) return;
+  const map = { '': '', saving: '⟳ saving…', saved: '✓ saved', error: '⚠ 保存失败' };
+  el.textContent = map[s] ?? s;
+  el.style.color = s === 'error' ? '#C85A30' : s === 'saved' ? '#2A7A50' : 'var(--text-faint)';
+}
+
+// 数据访问函数（原 localStorage 版本的替换）
+function ld(wk) { return _getWeek(wk).data; }
+function sd(wk, d) { _getWeek(wk).data = d; _scheduleSave(wk); }
+function ll(wk) { return _getWeek(wk).log; }
+function sl(wk, l) { _getWeek(wk).log = l; _scheduleSave(wk); }
+function lm(wk, gid) { return (_getWeek(wk).media || {})[gid] || []; }
+function sm(wk, gid, items) {
+  if (!_getWeek(wk).media) _getWeek(wk).media = {};
+  _getWeek(wk).media[gid] = items;
+  _scheduleSave(wk);
+}
+// ──────────────────────────────────────────────────────────────────
+
+function getWeekKey(offset) {
+  offset = offset || 0;
+  const now = new Date();
+  const day = now.getDay() || 7;
+  const monday = new Date(now);
+  monday.setDate(now.getDate() - day + 1 + offset * 7);
+  monday.setHours(0,0,0,0);
+  return monday.toISOString().slice(0,10);
+}
+function getWeekLabel(wk) {
+  const monday = new Date(wk);
+  const sunday = new Date(monday);
+  sunday.setDate(monday.getDate() + 6);
+  const f = d => (d.getMonth()+1) + '/' + d.getDate();
+  return f(monday) + ' — ' + f(sunday);
+}
+
+let currentOffset = 0;
+function gwk() { return getWeekKey(currentOffset); }
+
+function pushLog(wk, goal, action) {
+  const log = ll(wk);
+  const now = new Date();
+  const t = (now.getMonth()+1) + '/' + now.getDate() + ' ' + String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0');
+  log.unshift({ id: Date.now(), goalId: goal.id, goalName: goal.name, action, time: t, color: goal.color });
+  if (log.length > 30) log.pop();
+  sl(wk, log);
+}
+
+function addEntry(goalId, actionLabel) {
+  const wk = gwk();
+  const data = ld(wk);
+  data[goalId] = (data[goalId] || 0) + (AVALS[actionLabel] || 0);
+  sd(wk, data);
+  pushLog(wk, GOALS.find(g => g.id === goalId), actionLabel);
+  render();
+}
+
+function removeEntry(logId, goalId, actionLabel) {
+  const wk = gwk();
+  const data = ld(wk);
+  data[goalId] = Math.max(0, (data[goalId] || 0) - (AVALS[actionLabel] || 0));
+  sd(wk, data);
+  const log = ll(wk);
+  const idx = log.findIndex(l => l.id === logId);
+  if (idx !== -1) log.splice(idx, 1);
+  sl(wk, log);
+  render();
+}
+
+function addMedia(goalId) {
+  const input = document.getElementById('mi-' + goalId);
+  const title = input.value.trim();
+  if (!title) return;
+  const wk = gwk();
+  const items = lm(wk, goalId);
+  items.push({ id: Date.now(), title });
+  sm(wk, goalId, items);
+  const data = ld(wk);
+  data[goalId] = items.length;
+  sd(wk, data);
+  pushLog(wk, GOALS.find(g => g.id === goalId), title);
+  input.value = '';
+  render();
+}
+
+function removeMedia(goalId, mediaId) {
+  const wk = gwk();
+  const items = lm(wk, goalId).filter(i => i.id !== mediaId);
+  sm(wk, goalId, items);
+  const data = ld(wk);
+  data[goalId] = items.length;
+  sd(wk, data);
+  render();
+}
+
+function changeWeek(offset) {
+  if (offset === 0) currentOffset = 0;
+  else currentOffset += offset;
+  render();
+}
+
+function confirmReset() {
+  if (confirm('清空本周所有记录？')) {
+    const wk = gwk();
+    _cache[wk] = { data: {}, log: [], media: {} };
+    _saveWeek(wk);
+    render();
+  }
+}
+
+function fmt(v) {
+  if (v === Math.floor(v)) return String(v);
+  return v.toFixed(1).replace(/\.0$/, '');
+}
+
+function getZoneHours(data) {
+  const zh = { 0: 0, 1: 0, 2: 0, 3: 0, 4: 0 };
+  GOALS.forEach(g => {
+    const raw = data[g.id] || 0;
+    let hrs = g.unit.includes('小时') ? raw : raw * (g.hpu || 1.5);
+    zh[g.zone] += hrs;
+  });
+  return zh;
+}
+
+function drawPie(zh) {
+  const canvas = document.getElementById('pieChart');
+  const ctx = canvas.getContext('2d');
+  const total = Object.values(zh).reduce((a, b) => a + b, 0);
+  ctx.clearRect(0, 0, 140, 140);
+
+  if (total === 0) {
+    ctx.beginPath();
+    ctx.arc(70, 70, 56, 0, Math.PI * 2);
+    ctx.fillStyle = '#EEEEE8';
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(70, 70, 30, 0, Math.PI * 2);
+    ctx.fillStyle = '#F5F3EE';
+    ctx.fill();
+    ctx.fillStyle = '#BBBBB0';
+    ctx.font = '9px DM Mono, monospace';
+    ctx.textAlign = 'center';
+    ctx.fillText('no data', 70, 74);
+    return;
+  }
+
+  let angle = -Math.PI / 2;
+  [0, 1, 2, 3, 4].forEach(z => {
+    const hrs = zh[z] || 0;
+    if (hrs === 0) return;
+    const slice = (hrs / total) * Math.PI * 2;
+    ctx.beginPath();
+    ctx.moveTo(70, 70);
+    ctx.arc(70, 70, 56, angle, angle + slice);
+    ctx.closePath();
+    ctx.fillStyle = ZONES[z].color;
+    ctx.fill();
+    angle += slice;
+  });
+
+  ctx.beginPath();
+  ctx.arc(70, 70, 32, 0, Math.PI * 2);
+  ctx.fillStyle = '#FFFFFF';
+  ctx.fill();
+
+  ctx.fillStyle = '#1A1A18';
+  ctx.font = '500 15px DM Mono, monospace';
+  ctx.textAlign = 'center';
+  ctx.fillText(fmt(total), 70, 67);
+  ctx.fillStyle = '#BBBBB0';
+  ctx.font = '9px DM Mono, monospace';
+  ctx.fillText('/ 168h', 70, 80);
+}
+
+function renderLegend(zh) {
+  const total = 168;
+  document.getElementById('pieLegend').innerHTML = [0,1,2,3,4].map(z => {
+    const hrs = zh[z] || 0;
+    const pct = Math.round((hrs / total) * 100);
+    return `<div class="legend-row">
+      <div class="legend-swatch" style="background:${ZONES[z].color}"></div>
+      <div class="legend-label">${ZONES[z].label}</div>
+      <div class="legend-nums">
+        <span class="legend-pct">${pct}%</span>
+        <span class="legend-hrs"> ${fmt(hrs)}h</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function generateSummary(data, zh) {
+  const tracked = Object.values(zh).reduce((a, b) => a + b, 0);
+  const sleep = data['sleep'] || 0;
+  const gym = (data['gym_upper'] || 0) + (data['gym_lower'] || 0);
+  const omscs = data['omscs'] || 0;
+  const seminar = data['seminar'] || 0;
+  const networking = data['networking'] || 0;
+  const portfolio = data['portfolio'] || 0;
+  const work = data['work'] || 0;
+  const career = data['career'] || 0;
+  const kara = data['karamazov'] || 0;
+  const movie = data['movie'] || 0;
+  const doc = data['documentary'] || 0;
+  const flowers = data['flowers'] || 0;
+  const z1 = zh[1] || 0;
+  const z4 = zh[4] || 0;
+
+  if (tracked === 0) return '本周暂无记录。神经元在等待激活，或者你在用运动逃避一切，但那个不用记录所以我不知道。';
+
+  const parts = [];
+
+  if (sleep >= 56) parts.push(`睡眠 ${fmt(sleep)}h，<span class="summary-hi">Matthew Walker 看了很满意，认知功能得到保障。</span>`);
+  else if (sleep >= 49) parts.push(`睡眠 ${fmt(sleep)}h，比目标少 ${fmt(56-sleep)}h。<span class="summary-warn">小心认知债在后台累积。</span>`);
+  else if (sleep > 0) parts.push(`睡眠只有 ${fmt(sleep)}h。<span class="summary-warn">这解释了一切。</span>`);
+
+  if (gym >= 4) parts.push('撸铁四次全勤，<span class="summary-hi">肌肉在生长，神经系统在申请病假。</span>');
+  else if (gym === 3) parts.push('撸铁三次，差一次全勤——还是挺impressive的。');
+  else if (gym === 2) parts.push('撸铁两次，二练一休的节奏还活着。');
+  else if (gym === 1) parts.push('撸铁一次。<span class="summary-hi">杠铃觉得你们关系有点疏远。</span>');
+  else parts.push('<span class="summary-warn">本周零撸铁。</span>杠铃在灰尘里等你。');
+
+  if (work >= 20) parts.push(`工作 ${fmt(work)}h，本周交付完成。<span class="summary-hi">剩下的时间是你的。</span>`);
+  else if (work > 0) parts.push(`工作记录了 ${fmt(work)}h，还差 ${fmt(20-work)}h 到目标。摸鱼进行中。`);
+  else parts.push('工作本周未记录。在摸鱼还是在WFH发呆，我不评价。');
+
+  if (omscs >= 10) parts.push('OMSCS 时数达标，<span class="summary-hi">脑细胞已申请overtime补贴。</span>');
+  else if (omscs >= 5) parts.push(`OMSCS 完成 ${fmt(omscs)}h，还差 ${fmt(10-omscs)}h——绝对不是拖延，是在蓄力。`);
+  else if (omscs > 0) parts.push(`OMSCS 只完成了 ${fmt(omscs)}h。<span class="summary-warn">作业在看着你。</span>`);
+  else parts.push('<span class="summary-warn">OMSCS 本周挂零。</span>课程不会等人的，但你知道的。');
+
+  if (seminar >= 3) parts.push('Capitalism seminar 跟读完成，<span class="summary-hi">现在可以在饭桌上用剩余价值理论怼老公了。</span>');
+  else if (seminar > 0) parts.push(`Capitalism 读了 ${fmt(seminar)}h。够和老公聊几句，但不够反驳他。`);
+
+  if (networking >= 1) parts.push(`Active networking ${fmt(networking)}h。<span class="summary-hi">给陌生人发消息这件事你居然做了，了不起。</span>`);
+  else parts.push('Networking 本周为零。发消息比你想象的没那么可怕，但我不会逼你。');
+
+  if (portfolio >= 2) parts.push(`Portfolio building ${fmt(portfolio)}h，<span class="summary-hi">作品集在生长。</span>`);
+  else if (portfolio > 0) parts.push(`Portfolio building ${fmt(portfolio)}h，开了个头。`);
+
+  if (career > 0) parts.push(`Career self-learning ${fmt(career)}h（passive模式）。<span class="summary-hi">EO 理想还没死透。</span>`);
+
+  if (kara > 0) parts.push(`卡拉马佐夫读了 ${fmt(kara)}h。<span class="summary-hi">陀思妥耶夫斯基在天上点头。</span>`);
+
+  if (movie >= 1 && doc >= 1) parts.push('<span class="summary-hi">电影+纪录片双收，Ⅳ区充电满格。</span>');
+  else if (movie >= 1) parts.push('看了电影，Ⅳ区充上一格。');
+  else if (doc >= 1) parts.push('纪录片打卡，视觉叙事满足。');
+
+  if (flowers > 0) parts.push(`插花 ${fmt(flowers)}h。<span class="summary-hi">这是本周最清醒的决定之一。</span>`);
+
+  if (z1 > 16) parts.push(`<span class="summary-warn">⚠ Ⅰ区累计 ${fmt(z1)}h，已过警戒线。拖延+焦虑+用运动逃避——那个组合你熟。</span>`);
+  else if (z4 < 5 && z1 > 8) parts.push('<span class="summary-warn">Ⅳ区时数偏低。高认知输入没有恢复配套，神经系统在透支。</span>');
+  else if (z4 > 10 && z1 > 0) parts.push(`Ⅰ区+Ⅳ区都有记录，<span class="summary-hi">这才是可持续的节奏。</span>`);
+
+  const untracked = 168 - tracked;
+  if (untracked > 60) parts.push(`还有 ${fmt(untracked)}h 未记录——可能是通勤、发呆、洗澡、或者你不想承认的事情。`);
+
+  return parts.join('<br>');
+}
+
+function render() {
+  const wk = gwk();
+  const data = ld(wk);
+  const log = ll(wk);
+  const isCurrent = currentOffset === 0;
+
+  document.getElementById('weekLabel').textContent = getWeekLabel(wk) + (isCurrent ? ' · 本周' : '');
+
+  const container = document.getElementById('goalsContainer');
+  container.innerHTML = '';
+
+  GOALS.forEach(goal => {
+    const current = data[goal.id] || 0;
+    const pct = Math.min(1, current / goal.target);
+    const done = current >= goal.target;
+    const card = document.createElement('div');
+    card.className = 'goal-card' + (done ? ' done' : '');
+
+    let actionsHtml = '';
+    if (goal.isMedia && isCurrent) {
+      const items = lm(wk, goal.id);
+      const listHtml = items.length > 0
+        ? '<div class="media-list">' + items.map(it =>
+            `<div class="media-item"><span>${it.title}</span><button class="media-item-remove" onclick="removeMedia('${goal.id}',${it.id})">×</button></div>`
+          ).join('') + '</div>' : '';
+      actionsHtml = listHtml + `<div class="media-input-row"><input type="text" id="mi-${goal.id}" placeholder="${goal.placeholder}" onkeydown="if(event.key==='Enter')addMedia('${goal.id}')"><button class="add-btn primary" style="color:${goal.color};border-color:${goal.color}30;" onclick="addMedia('${goal.id}')">+ 记录</button></div>`;
+    } else if (!goal.isMedia && isCurrent) {
+      actionsHtml = goal.actions.map(a =>
+        `<button class="add-btn primary" style="color:${goal.color};border-color:${goal.color}30;" onclick="addEntry('${goal.id}','${a}')">${a}</button>`
+      ).join('');
+    } else if (goal.isMedia && !isCurrent) {
+      const items = lm(wk, goal.id);
+      actionsHtml = items.length > 0
+        ? '<div class="media-list">' + items.map(it => `<div class="media-item"><span>${it.title}</span></div>`).join('') + '</div>' : '';
+    }
+
+    card.innerHTML = `
+      <div class="goal-row">
+        <div class="goal-meta">
+          <div class="goal-label">
+            <div class="dot" style="background:${goal.color}"></div>
+            <span class="goal-name">${goal.name}</span>
+          </div>
+          <div class="goal-meta-bottom">
+            <span class="goal-desc">${goal.desc}</span>
+            <span class="zone-badge ${goal.zoneBadge}">${goal.zoneLabel}</span>
+          </div>
+        </div>
+        <div class="goal-right">
+          <div class="fraction">
+            <span style="color:${done ? goal.color : 'var(--text)'}">${fmt(current)}</span>
+            <span class="sep">/</span>
+            <span class="target">${fmt(goal.target)}</span>
+          </div>
+          <div class="goal-unit">${goal.unit}</div>
+        </div>
+      </div>
+      <div class="bar-track"><div class="bar-fill" style="width:${Math.round(pct*100)}%;background:${done ? goal.color : goal.color+'80'}"></div></div>
+      <div class="actions">${actionsHtml}${done ? '<span class="done-badge">&#10003; done</span>' : ''}</div>`;
+    container.appendChild(card);
+  });
+
+  const logList = document.getElementById('logList');
+  logList.innerHTML = log.length === 0
+    ? '<div class="empty-log">还没有记录</div>'
+    : log.map(l => `
+      <div class="log-item">
+        <div class="log-item-left">
+          <div class="log-dot" style="background:${l.color}"></div>
+          <span class="log-text">${l.goalName} · ${l.action}</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span class="log-time">${l.time}</span>
+          ${isCurrent ? `<button class="log-remove" onclick="removeEntry(${l.id},'${l.goalId}','${l.action}')" title="撤销">×</button>` : ''}
+        </div>
+      </div>`).join('');
+
+  const zh = getZoneHours(data);
+  drawPie(zh);
+  renderLegend(zh);
+  document.getElementById('summaryText').innerHTML = generateSummary(data, zh);
+}
+
+async function init() {
+  document.getElementById('weekLabel').textContent = '加载中…';
+  _setStatus('saving');
+  await _loadAll();
+  _setStatus('');
+  render();
+}
+init();
+</script>
+</body>
+</html>
